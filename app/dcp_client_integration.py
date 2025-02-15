@@ -8,17 +8,17 @@ from distributed_pipeline import work_function
 data = [
     (
         "testfiles/20180627_seq_50m_NC.tif",         # Reference image path
-        "testfiles/20180627_seq_50m_NC copy.tif",      # Target image path
+        "testfiles/20180627_seq_50m_NC copy.tif",    # Target image path
         {   # Radiometric parameters
-            'gain': [0.1, 0.11, 0.09, 0.1, 0.1],
-            'offset': [1, 1, 1, 1, 1],
+            'gain': [0.012, 0.012, 0.012, 0.012, 0.012],
+            'offset': [0, 0, 0, 0, 0],
             'sunelev': 60.0,
             'edist': 1.0,
-            'Esun': [1800, 1700, 1600, 1500, 1400],
+            'Esun': [1913, 1822, 1557, 1317, 1074],
             'blackadjust': 0.01,
-            'percentile': 0.1
+            'percentile': 1
         },
-        "ORB",           # Detector type
+        "ORB",           # Detector type (not provided, kept as "ORB" placeholder)
         "median",        # Noise reduction method
         3,               # Kernel size
         1.0,             # Sigma for Gaussian (if applicable)
@@ -27,6 +27,7 @@ data = [
         False            # Use parallel noise reduction flag
     )
 ]
+
 
 # Define the compute workload (job) using dcp.compute_for.
 job = dcp.compute_for(data, work_function)

@@ -13,24 +13,43 @@ import matplotlib.pyplot as plt
 # -------------------------------
 # Radiometric & Geometric Correction (Tasks 1 & 2)
 # -------------------------------
-def rigorous_radiometric_correction_rasterio(image_path, gain, offset, sunelev, edist, Esun, blackadjust=0.01, percentile=0.1):
+def dark_object_subtraction(band, low_percentile=1):
     """
-    Perform rigorous radiometric correction for a multispectral image.
+    Compute a robust dark object value by averaging all pixels below the given low percentile.
+    
+    Parameters:
+      band (np.ndarray): Single band reflectance array.
+      low_percentile (float): Percentile (0-100) used to threshold dark pixels (default is 1).
+      
+    Returns:
+      float: Robust dark object value for the band.
+    """
+    # Determine the threshold at the low_percentile (e.g., 1st percentile)
+    threshold = np.percentile(band, low_percentile)
+    # Select pixels that are below or equal to this threshold
+    dark_pixels = band[band <= threshold]
+    # Compute and return the mean of these dark pixels
+    return np.mean(dark_pixels) if dark_pixels.size > 0 else 0.0
+
+def rigorous_radiometric_correction_rasterio(image_path, gain, offset, sunelev, edist, Esun, 
+                                               blackadjust=0.01, low_percentile=1):
+    """
+    Perform rigorous radiometric correction for a multispectral image using a robust dark object subtraction.
     
     Parameters:
       image_path (str): Path to the multispectral image.
       gain (array-like): Sensor gain for each band.
       offset (array-like): Sensor offset for each band.
       sunelev (float): Sun elevation in degrees.
-      edist (float): Earth–Sun distance.
+      edist (float): Earth–Sun distance (in appropriate units).
       Esun (array-like): Exo-atmospheric solar irradiance for each band.
-      blackadjust (float): Adjustment for dark object subtraction.
-      percentile (float): Percentile for dark object estimation.
+      blackadjust (float): Adjustment factor for dark object subtraction.
+      low_percentile (float): Percentile (0-100) to estimate the dark object using a trimmed mean.
       
     Returns:
       np.ndarray: Corrected reflectance image in shape (bands, H, W) with values in [0,1].
     """
-    # Task 6: Memory Optimization – ensure we use float32 and avoid extra copies.
+    # Read image using rasterio and convert to float32 for memory efficiency.
     with rasterio.open(image_path) as src:
         image = src.read().astype(np.float32)  # Shape: (bands, H, W)
     
@@ -39,18 +58,35 @@ def rigorous_radiometric_correction_rasterio(image_path, gain, offset, sunelev, 
     
     n_bands, h, w = image.shape
     radiance = np.empty_like(image)
-    for i in range(n_bands):
-        radiance[i, :, :] = gain[i] * image[i, :, :] + offset[i]
     
+    # Convert DN to radiance for each band using provided gain and offset.
+    for i in range(n_bands):
+        radiance[i] = gain[i] * image[i] + offset[i]
+    
+    # Compute sun zenith angle and its cosine.
     sun_zenith = 90 - sunelev
     cos_sun_zenith = np.cos(np.deg2rad(sun_zenith))
-    Esun = np.array(Esun)
-    reflectance = (np.pi * radiance) / (Esun[:, None, None] * cos_sun_zenith)
-    reflectance /= edist**2
     
-    dark_obj = np.percentile(reflectance, percentile, axis=(1, 2))
+    # Ensure Esun is an array.
+    Esun = np.array(Esun)
+    
+    # Apply the standard TOA reflectance formula:
+    # reflectance = (pi * radiance * edist^2) / (Esun * cos(sun_zenith))
+    reflectance = (np.pi * radiance * (edist**2)) / (Esun[:, None, None] * cos_sun_zenith)
+    
+    # Use the robust dark object method: for each band, compute the mean of the lowest low_percentile values.
+    dark_obj = np.empty(n_bands, dtype=np.float32)
+    for i in range(n_bands):
+        dark_obj[i] = dark_object_subtraction(reflectance[i], low_percentile=low_percentile)
+    
+    # Apply an adjustment factor to the estimated dark object values.
     dark_obj_adj = dark_obj * (1 - blackadjust)
-    corrected = np.clip(reflectance - dark_obj_adj[:, None, None], 0, 1)
+    
+    # Subtract the dark object value from each band and clip the results to [0, 1].
+    corrected = np.empty_like(reflectance)
+    for i in range(n_bands):
+        corrected[i] = np.clip(reflectance[i] - dark_obj_adj[i], 0, 1)
+    
     return corrected
 
 def compute_homography_sk(ref_img, tgt_img, detector_type='ORB'):
@@ -220,7 +256,7 @@ def noise_reduction_filter_parallel(image, method='median', kernel_size=3, sigma
 # -------------------------------
 # NDVI Analysis (Task 5)
 # -------------------------------
-def compute_ndvi(image, nir_band_index, red_band_index):
+def compute_ndvi(image, red_band_index, nir_band_index):
     """
     Compute the Normalized Difference Vegetation Index (NDVI).
     
