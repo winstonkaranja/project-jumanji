@@ -2,7 +2,7 @@ import os
 import time
 import numpy as np
 import concurrent.futures
-import rasterio
+import tifffile as tiff
 from skimage.feature import ORB, match_descriptors
 from skimage.measure import ransac
 from skimage.transform import ProjectiveTransform, warp
@@ -31,7 +31,7 @@ def dark_object_subtraction(band, low_percentile=1):
     # Compute and return the mean of these dark pixels
     return np.mean(dark_pixels) if dark_pixels.size > 0 else 0.0
 
-def rigorous_radiometric_correction_rasterio(image_path, gain, offset, sunelev, edist, Esun, 
+def rigorous_radiometric_correction(image_path, gain, offset, sunelev, edist, Esun, 
                                                blackadjust=0.01, low_percentile=1):
     """
     Perform rigorous radiometric correction for a multispectral image using a robust dark object subtraction.
@@ -49,9 +49,13 @@ def rigorous_radiometric_correction_rasterio(image_path, gain, offset, sunelev, 
     Returns:
       np.ndarray: Corrected reflectance image in shape (bands, H, W) with values in [0,1].
     """
-    # Read image using rasterio and convert to float32 for memory efficiency.
-    with rasterio.open(image_path) as src:
-        image = src.read().astype(np.float32)  # Shape: (bands, H, W)
+    # Read the TIFF using tifffile
+    image = tiff.imread(image_path).astype(np.float32)
+
+
+    # The array is (H, W, bands) and we need (bands, H, W), transpose it.
+    if image.ndim == 3:
+        image = image.transpose((2, 0, 1))
     
     if image is None:
         raise ValueError(f"Could not read image from {image_path}")
@@ -166,8 +170,8 @@ def geometric_correction_pipeline(reference_image_path, target_image_path, radio
       tuple: (Estimated transform, aligned image (H, W, channels), alignment RMSE)
     """
     # Apply radiometric correction to both images (output shape: (bands, H, W))
-    ref_corr = rigorous_radiometric_correction_rasterio(reference_image_path, **radiometric_params)
-    tgt_corr = rigorous_radiometric_correction_rasterio(target_image_path, **radiometric_params)
+    ref_corr = rigorous_radiometric_correction(reference_image_path, **radiometric_params)
+    tgt_corr = rigorous_radiometric_correction(target_image_path, **radiometric_params)
     
     # Transpose to (H, W, bands) for geometric processing
     ref_img = np.transpose(ref_corr, (1, 2, 0))
