@@ -26,13 +26,13 @@ pairs_files = get_image_pairs(ref_folder, target_folder, pattern="*.tif")
 
 # Define radiometric and constant processing parameters.
 radiometric_params = {
-    'gain': [0.1, 0.11, 0.09, 0.1, 0.1],
-    'offset': [1, 1, 1, 1, 1],
+    'gain': [0.012, 0.012, 0.012, 0.012, 0.012],
+    'offset': [0, 0, 0, 0, 0],
     'sunelev': 60.0,
     'edist': 1.0,
-    'Esun': [1800, 1700, 1600, 1500, 1400],
+    'Esun': [1913, 1822, 1557, 1317, 1074],
     'blackadjust': 0.01,
-    'percentile': 0.1
+    'percentile': 1
 }
 
 detector_type = "ORB"
