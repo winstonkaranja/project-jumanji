@@ -7,11 +7,13 @@ import getpass
 
 import os
 from PIL import Image
-from langchain.llms import OpenAI
+
 from langchain.agents import AgentExecutor, create_tool_calling_agent
 from langchain_core.tools import tool
 import openai
 from langchain_openai import ChatOpenAI
+
+
 from langchain.schema import HumanMessage
 from langchain.schema.messages import SystemMessage
 from PIL import Image
@@ -124,7 +126,7 @@ def analyze_image_and_get_response(bucket_name: str, key: str, llm) -> dict:
     ]
     
     # Invoke the LLM with the prepared messages.
-    response = llm(messages)
+    response = llm.invoke(messages)
     return response
 
 
