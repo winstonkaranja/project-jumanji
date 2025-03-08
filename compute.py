@@ -371,3 +371,78 @@ def full_image_processing_pipeline(target_image_path, radiometric_params, detect
         plt.show()
     
     return ndvi_noise_reduced, ndvi_rmse
+
+
+
+def estimate_biomass(ndvi, a=2.5, b=1.2):
+    """
+    Estimate Above-Ground Biomass (AGB) using an empirical NDVI-to-biomass model.
+    
+    Parameters:
+      ndvi (np.ndarray): NDVI image.
+      a (float): Biomass coefficient (default: 5).
+      b (float): NDVI exponent factor (default: 1.2).
+      
+    Returns:
+      np.ndarray: Estimated biomass per pixel.
+    """
+    return a * np.exp(b * ndvi)  # Biomass in kg/m²
+
+def calculate_carbon_storage(biomass, carbon_fraction=0.47):
+    """
+    Convert biomass to stored carbon using IPCC carbon fraction.
+    
+    Parameters:
+      biomass (np.ndarray): Biomass per pixel (kg/m²).
+      carbon_fraction (float): Fraction of biomass that is carbon (default: 0.47).
+      from compute import process_ndvi_for_carbon_credits
+    Returns:
+      np.ndarray: Carbon stored per pixel (kg/m²).
+    """
+    return biomass * carbon_fraction
+
+def convert_carbon_to_co2(carbon_storage):
+    """
+    Convert stored carbon to CO₂ equivalent.
+    
+    Parameters:
+      carbon_storage (np.ndarray): Carbon stored per pixel (kg/m²).
+      
+    Returns:
+      np.ndarray: CO₂ sequestered per pixel (kg/m²).
+    """
+    return carbon_storage * (44 / 12)  # CO₂ equivalent (kg/m²)
+
+def calculate_carbon_credits(co2_sequestration, pixel_area_m2):
+    """
+    Calculate total carbon credits from CO₂ sequestration.
+    
+    Parameters:
+      co2_sequestration (np.ndarray): CO₂ stored per pixel (kg/m²).
+      pixel_area_m2 (float): Area of each pixel in square meters.
+      
+    Returns:
+      float: Total carbon credits (1 credit = 1 metric ton CO₂).
+    """
+    total_co2_kg = np.sum(co2_sequestration * pixel_area_m2)  # Convert per-pixel to total CO₂ in kg
+    total_co2_tonnes = total_co2_kg / 1000  # Convert kg to metric tonnes
+    return total_co2_tonnes  # Carbon credits (1 credit = 1 tCO₂e)
+
+# ==== AUTOMATION PIPELINE ====
+def process_ndvi_for_carbon_credits(ndvi_noise_reduced, pixel_area_m2):
+    """
+    Full pipeline to process NDVI into carbon credits.
+    
+    Parameters:
+      ndvi_noise_reduced (np.ndarray): NDVI image.
+      pixel_area_m2 (float): Area of each pixel in square meters.
+      
+    Returns:
+      float: Total carbon credits for the farm.
+    """
+    biomass = estimate_biomass(ndvi_noise_reduced)  # Step 1: Estimate biomass
+    carbon_storage = calculate_carbon_storage(biomass)  # Step 2: Convert to carbon storage
+    co2_sequestration = convert_carbon_to_co2(carbon_storage)  # Step 3: Convert to CO₂ equivalent
+    carbon_credits = calculate_carbon_credits(co2_sequestration, pixel_area_m2)  # Step 4: Calculate credits
+    
+    return carbon_credits
