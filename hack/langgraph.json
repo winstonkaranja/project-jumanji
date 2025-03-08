@@ -1,0 +1,10 @@
+{
+    "dockerfile_lines": [],
+    "graphs": {
+      "agent": "./agents.py:aerial_photo_analysis",
+      "verifier": "./agents.py:analyze_image_and_get_response"
+    },
+    "dependencies": ["."],
+    "python_version": "3.11",
+    "env": ".env"
+  }

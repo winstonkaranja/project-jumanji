@@ -6,3 +6,5 @@ awscliv2.zip
 aws
 __pycache__
 .env
+ndvi_output.jpg
+ndvi_result2.npy

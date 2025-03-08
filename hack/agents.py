@@ -1,9 +1,10 @@
+from typing import Any
 import boto3
 from dotenv import load_dotenv
 import tifffile as tiff
 import numpy as np
 from io import BytesIO
-import getpass
+
 
 import os
 from PIL import Image
@@ -21,7 +22,7 @@ import base64
 import requests
 import os
 
-NDVI_NOISE_REDUCED = None
+
 
 # Define the LLM
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
@@ -139,8 +140,8 @@ def analyze_image_and_get_response(bucket_name: str, key: str, llm) -> dict:
 # -------------------------------------------------------
 # Step 2: Wrap NDVI Check as a LangChain Tool for Aerial Photo
 # -------------------------------------------------------
-from numpy import ndarray
-from compute import full_image_processing_pipeline, process_ndvi_for_carbon_credits
+
+from hack.compute import full_image_processing_pipeline, process_ndvi_for_carbon_credits
 from langchain_core.prompts import ChatPromptTemplate
 import matplotlib.pyplot as plt
 
@@ -159,7 +160,7 @@ RADIOMETRIC_PARAMS = {
 NOISE_METHOD = 'median'
 NOISE_KERNEL_SIZE = 3
 SIGMA = 1.0
-NDVI_NOISE_REDUCED = None
+
 
 
 # -------------------------------------------------------
@@ -189,7 +190,7 @@ def check_ndvi(
     image = read_image_from_s3(bucket_name, key)
 
     # Run NDVI processing pipeline
-    ndvi_noise_reduced, save_path = full_image_processing_pipeline(
+    ndvi_noise_reduced, _= full_image_processing_pipeline(
         image,
         radiometric_params, 
         detector_type='ORB',
@@ -201,7 +202,6 @@ def check_ndvi(
         visualize=False,
         use_parallel_noise_reduction=False
     )
-    NDVI_NOISE_REDUCED = ndvi_noise_reduced
 
     # Plot and save the NDVI image
     plt.figure(figsize=(10, 8))
@@ -210,8 +210,12 @@ def check_ndvi(
     plt.title("NDVI Analysis")
     plt.savefig(save_path, dpi=300)
     plt.close()
+    # Stacking along new axis
+    ndvi_noise_reduced = np.concatenate(ndvi_noise_reduced)
 
-    return NDVI_NOISE_REDUCED, save_path
+    # Save NDVI data to a file (e.g., using NumPy's save)
+    np.save("ndvi_result2.npy", ndvi_noise_reduced)
+    return ndvi_noise_reduced
 
 
 
@@ -257,7 +261,7 @@ def aerial_photo_analysis(llm, key: str) -> dict:
                 return credits
 
             # Example usage: assuming ndvi_noise_reduced is defined elsewhere
-            ndvi_noise_reduced = NDVI_NOISE_REDUCED
+            ndvi_noise_reduced = np.load("ndvi_result2.npy")
             credits = compute_credits(ndvi_noise_reduced)
             print("Credits computed:", credits)
     else:
