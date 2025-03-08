@@ -35,9 +35,4 @@ services:
             langgraph-postgres:
                 condition: service_healthy
         environment:
-            REDIS_URI: redis://langgraph-redis:6379
-            PINECONE_API_KEY: "ef75d4e7-b787-41fe-8a58-0b2ab2b13a51"
-            OPENAI_API_KEY: "sk-jN-7O_37tPiCKRgWhCh0jfCfobnRQpydZXruH3dWSTT3BlbkFJ2OAEIg6JHflcnE5OzEuD7OBwD_o2y6D0otjgN-R0EA"
-            LANGSMITH_API_KEY: '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'
-            TAVILY_API_KEY: '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'
-            POSTGRES_URI: postgres://postgres:postgres@langgraph-postgres:5432/postgres?sslmode=disable
+
