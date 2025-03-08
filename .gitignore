@@ -4,3 +4,4 @@ testfiles/20180627_seq_50m_NC copy.tif
 testfiles/20180627_seq_50m_NC.tif
 awscliv2.zip
 aws
+__pycache__
