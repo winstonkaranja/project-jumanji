@@ -65,7 +65,7 @@ def dark_object_subtraction(band, low_percentile=1):
     # Compute and return the mean of these dark pixels
     return np.mean(dark_pixels) if dark_pixels.size > 0 else 0.0
 
-def rigorous_radiometric_correction(image_path, gain, offset, sunelev, edist, Esun, 
+def rigorous_radiometric_correction(image, gain, offset, sunelev, edist, Esun, 
                                                blackadjust=0.01, low_percentile=1):
     """
     Perform rigorous radiometric correction for a multispectral image using a robust dark object subtraction.
@@ -83,20 +83,13 @@ def rigorous_radiometric_correction(image_path, gain, offset, sunelev, edist, Es
     Returns:
       np.ndarray: Corrected reflectance image in shape (bands, H, W) with values in [0,1].
     """
-    # Read the TIFF using tifffile
-        # Example usage
-    bucket_name = 'qijaniproductsbucket'
-    key = '20180627_seq_50m_NC.tif'
-    image = read_tiff_from_s3(bucket_name, key)
-    # image = tiff.imread(image_path).astype(np.float32)
-
 
     # The array is (H, W, bands) and we need (bands, H, W), transpose it.
     if image.ndim == 3:
         image = image.transpose((2, 0, 1))
     
     if image is None:
-        raise ValueError(f"Could not read image from {image_path}")
+        raise ValueError(f"Could not read image!")
     
     n_bands, h, w = image.shape
     radiance = np.empty_like(image)
@@ -113,7 +106,7 @@ def rigorous_radiometric_correction(image_path, gain, offset, sunelev, edist, Es
     Esun = np.array(Esun)
     
     # Apply the standard TOA reflectance formula:
-    # reflectance = (pi * radiance * edist^2) / (Esun * cos(sun_zenith))
+
     reflectance = (np.pi * radiance * (edist**2)) / (Esun[:, None, None] * cos_sun_zenith)
     
     # Use the robust dark object method: for each band, compute the mean of the lowest low_percentile values.
@@ -131,69 +124,9 @@ def rigorous_radiometric_correction(image_path, gain, offset, sunelev, edist, Es
     
     return corrected
 
-# def compute_homography_sk(ref_img, tgt_img, detector_type='ORB'):
-#     """
-#     Computes the projective transform (homography) between two images using ORB features.
-    
-#     Parameters:
-#       ref_img (np.ndarray): Reference image (H, W, channels).
-#       tgt_img (np.ndarray): Target image (H, W, channels).
-#       detector_type (str): Currently supports 'ORB'.
-      
-#     Returns:
-#       ProjectiveTransform: Estimated projective transform.
-#     """
-#     # Convert to grayscale by averaging over bands
-#     ref_gray = np.mean(ref_img, axis=2) if ref_img.ndim == 3 else ref_img
-#     tgt_gray = np.mean(tgt_img, axis=2) if tgt_img.ndim == 3 else tgt_img
 
-#     orb = ORB(n_keypoints=500)
-#     orb.detect_and_extract(ref_gray)
-#     keypoints1, descriptors1 = orb.keypoints, orb.descriptors
 
-#     orb.detect_and_extract(tgt_gray)
-#     keypoints2, descriptors2 = orb.keypoints, orb.descriptors
-
-#     matches = match_descriptors(descriptors1, descriptors2, cross_check=True)
-#     if len(matches) < 4:
-#         raise RuntimeError("Not enough matches to compute homography.")
-    
-#     src = keypoints1[matches[:, 0]]
-#     dst = keypoints2[matches[:, 1]]
-    
-#     model_robust, inliers = ransac((src, dst), ProjectiveTransform, min_samples=4,
-#                                    residual_threshold=2, max_trials=1000)
-#     return model_robust
-
-# def warp_image_sk(image, transform, output_shape):
-#     """
-#     Warps the image using the given projective transform.
-    
-#     Parameters:
-#       image (np.ndarray): Image (H, W, channels).
-#       transform (ProjectiveTransform): Estimated transform.
-#       output_shape (tuple): Desired output shape.
-      
-#     Returns:
-#       np.ndarray: Warped (aligned) image.
-#     """
-#     return warp(image, inverse_map=transform.inverse, output_shape=output_shape)
-
-# def validate_alignment(ref_img, aligned_img):
-#     """
-#     Computes the RMSE between the reference and aligned images.
-    
-#     Parameters:
-#       ref_img (np.ndarray): Reference image (H, W, channels).
-#       aligned_img (np.ndarray): Aligned image (H, W, channels).
-      
-#     Returns:
-#       float: RMSE value.
-#     """
-#     diff = (ref_img - aligned_img) ** 2
-#     return np.sqrt(np.mean(diff))
-
-def geometric_correction_pipeline(target_image_path, radiometric_params, detector_type='ORB', visualize=False):
+def geometric_correction_pipeline(image, radiometric_params, detector_type='ORB', visualize=False):
     """
     Executes the radiometric correction followed by geometric correction.
     
@@ -208,17 +141,14 @@ def geometric_correction_pipeline(target_image_path, radiometric_params, detecto
       tuple: (Estimated transform, aligned image (H, W, channels), alignment RMSE)
     """
     # Apply radiometric correction to both images (output shape: (bands, H, W))
-    # ref_corr = rigorous_radiometric_correction(reference_image_path, **radiometric_params)
-    tgt_corr = rigorous_radiometric_correction(target_image_path, **radiometric_params)
+
+    tgt_corr = rigorous_radiometric_correction(image, **radiometric_params)
     
     # Transpose to (H, W, bands) for geometric processing
-    # ref_img = np.transpose(ref_corr, (1, 2, 0))
+
     tgt_img = np.transpose(tgt_corr, (1, 2, 0))
     
-    # # Compute the transform
-    # transform = compute_homography_sk(ref_img, tgt_img, detector_type)
-    # aligned_img = warp_image_sk(tgt_img, transform, ref_img.shape)
-    # rmse = validate_alignment(ref_img, aligned_img)
+
     
     if visualize:
         def prepare_display(img):
@@ -321,7 +251,7 @@ def compute_ndvi(image, red_band_index, nir_band_index):
 # ----------------------------------------------
 # Unified Pipeline: Combine Tasks 1, 2, 3 and 5
 # ----------------------------------------------
-def full_image_processing_pipeline(target_image_path, radiometric_params, detector_type,
+def full_image_processing_pipeline(image, radiometric_params, detector_type,
                                    noise_method, noise_kernel_size, sigma, nir_band_index, red_band_index,
                                    visualize=False, use_parallel_noise_reduction=False):
     """
@@ -347,7 +277,7 @@ def full_image_processing_pipeline(target_image_path, radiometric_params, detect
       tuple: (noise-reduced image, ndvi_rmse)
     """
     # Step 1: Radiometric and geometric correction.
-    aligned_img = geometric_correction_pipeline(target_image_path, radiometric_params, detector_type, visualize)
+    aligned_img = geometric_correction_pipeline(image, radiometric_params, detector_type, visualize)
     
     # Step 2: Apply noise reduction to the aligned image.
     if use_parallel_noise_reduction:
