@@ -128,7 +128,8 @@ def analyze_image_and_get_response(bucket_name: str, key: str, llm) -> dict:
     messages = [
         SystemMessage(content="You are an AI that analyzes images."),
         HumanMessage(content=[
-            {"type": "text", "text": "What do you see in this image?"},
+            {"type": "text", "text": "You are an image moderation system. Analyze the image and determine if it clearly depicts a plant or plantation (e.g., crops, greenery, trees, leaves, or agricultural land). Only reply with `approve` if it's clearly a plant/plantation image. Otherwise, reply with `deny`. Respond with only one word in lowercase: `approve` or `deny`."
+        },
             {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}}
         ])
     ]
