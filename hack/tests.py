@@ -1,6 +1,7 @@
 from langchain_openai import ChatOpenAI
 
-from hack.agents import analyze_image_and_get_response
+from agents import analyze_image_and_get_response
+
 
 # Instantiate the LLM (ensure your API key and other settings are configured)
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)

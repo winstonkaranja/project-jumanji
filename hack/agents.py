@@ -12,7 +12,7 @@ from PIL import Image
 from langchain.agents import AgentExecutor, create_tool_calling_agent
 from langchain_core.tools import tool
 import openai
-from langchain_openai import ChatOpenAI
+
 
 
 from langchain.schema import HumanMessage
@@ -22,10 +22,11 @@ import base64
 import requests
 import os
 
+from compute import full_image_processing_pipeline, process_ndvi_for_carbon_credits
 
 
-# Define the LLM
-llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+
+
 
 
 
@@ -141,7 +142,6 @@ def analyze_image_and_get_response(bucket_name: str, key: str, llm) -> dict:
 # Step 2: Wrap NDVI Check as a LangChain Tool for Aerial Photo
 # -------------------------------------------------------
 
-from hack.compute import full_image_processing_pipeline, process_ndvi_for_carbon_credits
 from langchain_core.prompts import ChatPromptTemplate
 import matplotlib.pyplot as plt
 
@@ -220,7 +220,7 @@ def check_ndvi(
 
 
 
-def aerial_photo_analysis(llm, key: str) -> dict:
+def aerial_photo_analysis(bucket_name: str, key: str, llm) -> dict:
     """
     Runs the aerial photo analysis pipeline using the check_ndvi tool.
     
@@ -244,6 +244,7 @@ def aerial_photo_analysis(llm, key: str) -> dict:
         ]
     )
     
+    
     # Include the NDVI checking tool in our list of tools (assumes check_ndvi is defined)
     tools = [check_ndvi]
     
@@ -260,7 +261,7 @@ def aerial_photo_analysis(llm, key: str) -> dict:
                 credits = process_ndvi_for_carbon_credits(ndvi_noise_reduced, pixel_area_m2)
                 return credits
 
-            # Example usage: assuming ndvi_noise_reduced is defined elsewhere
+            # Usage: assuming ndvi_noise_reduced is defined elsewhere
             ndvi_noise_reduced = np.load("ndvi_result2.npy")
             credits = compute_credits(ndvi_noise_reduced)
             print("Credits computed:", credits)
@@ -269,9 +270,6 @@ def aerial_photo_analysis(llm, key: str) -> dict:
 
     return result
 
-# Example usage:
-# key = "20180627_seq_50m_NC.tif"
-# result = aerial_photo_analysis(llm, key)
-# print("Final agent decision:", result)
+
 
 

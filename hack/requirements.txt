@@ -47,9 +47,9 @@ langchain-core==0.3.42
 langchain-openai==0.3.8
 langchain-text-splitters==0.3.6
 langgraph==0.3.5
-langgraph-checkpoint==2.0.18
-langgraph-prebuilt==0.1.2
-langgraph-sdk==0.1.55
+langgraph-checkpoint
+langgraph-prebuilt
+langgraph-sdk
 langsmith==0.3.13
 lazy_loader==0.4
 marshmallow==3.26.1
@@ -78,7 +78,6 @@ pydantic==2.10.6
 pydantic-settings==2.8.1
 pydantic_core==2.27.2
 Pygments==2.19.1
-pygraphviz==1.14
 pyparsing==3.2.1
 python-dateutil==2.9.0.post0
 python-dotenv==1.0.1

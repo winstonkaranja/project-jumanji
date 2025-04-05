@@ -1,7 +1,7 @@
 from langchain_openai import ChatOpenAI
 
+from agents import aerial_photo_analysis
 
-from hack.agents import aerial_photo_analysis
 
 # Instantiate your LLM (ensure your API key is configured appropriately)
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
