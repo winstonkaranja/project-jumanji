@@ -23,7 +23,13 @@ from io import BytesIO
 
 def read_tiff_from_s3(bucket_name, key):
     # Initialize S3 client
-    s3_client = boto3.client('s3')
+    s3_client = boto3.client(
+    's3',
+    aws_access_key_id=os.environ.get('AWS_ACCESS_KEY'),
+    aws_secret_access_key=os.environ.get('AWS_SECRET_KEY'),
+    region_name=os.environ.get('AWS_REGION')
+  )
+
     
     # Get the object from S3
     response = s3_client.get_object(Bucket=bucket_name, Key=key)
