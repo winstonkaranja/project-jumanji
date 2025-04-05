@@ -244,7 +244,7 @@ def aerial_photo_analysis(key: str, llm) -> dict:
             ("system", (
                 "You are an agricultural image evaluator. Given the following multispectral aerial image key, "
                 "use the check_ndvi tool to compute NDVI. Determine if the NDVI figure produced in the output file "
-                "save path indicates real farmland. Then, output either 'Accept' or 'Reject' (short and precise)."
+                "save path indicates real farmland. Then, output either 'approve' or 'deny' (short and precise)."
             )),
             ("human", "Image: " + key),
             ("placeholder", "{agent_scratchpad}"),
@@ -261,20 +261,6 @@ def aerial_photo_analysis(key: str, llm) -> dict:
     
     # Run the agent (the "input" field is used as the initial message for the agent)
     result = validity_agent.invoke({"input": "Image: " + key})
-    #Compute credits for accepted images
-    if "accept" in str(result).lower():
-            def compute_credits(ndvi_noise_reduced, pixel_area_m2=0.01):
-                """Assuming process_ndvi_for_carbon_credits accepts a list of NDVI values."""
-                credits = process_ndvi_for_carbon_credits(ndvi_noise_reduced, pixel_area_m2)
-                return credits
-
-            # Usage: assuming ndvi_noise_reduced is defined elsewhere
-            ndvi_noise_reduced = np.load("ndvi_result2.npy")
-            credits = compute_credits(ndvi_noise_reduced)
-            print("Credits computed:", credits)
-    else:
-            raise Exception("Image rejected")
-
     return result
 
 
