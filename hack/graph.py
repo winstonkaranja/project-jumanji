@@ -1,18 +1,20 @@
+import json
 from typing import NotRequired, TypedDict
 
 # Import required LangGraph components
 from langgraph.graph import StateGraph, START, END
 from langchain_openai import ChatOpenAI
 import numpy as np
+from traitlets import default
 
-from agents import aerial_photo_analysis, analyze_image_and_get_response
+from agents import PlantAnalysisOutput, aerial_photo_analysis, analyze_image_and_get_response
 from compute import process_ndvi_for_carbon_credits
 
 # Define the state schema
 class State(TypedDict):
     user_id: NotRequired[str]  # to store the user ID from the input str
     ground_key: str
-    aerial_key: str
+    aerial_key: PlantAnalysisOutput
     analyze_result: NotRequired[str]  # to store the LLM response from image analysis
     aerial_result: NotRequired[str]   # to store the result from aerial photo analysis
     carbon_credits: NotRequired[float]
@@ -24,6 +26,8 @@ class State(TypedDict):
 def node_analyze(state: State) -> dict:
 
     # Define the LLM
+    
+    
     llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
     # Check if user_id is present in the state
@@ -63,8 +67,24 @@ def node_aerial(state: State) -> dict:
             print("Image accepted, computing credits...")
 
             ndvi_noise_reduced = np.load("ndvi_result2.npy")
-            credits = process_ndvi_for_carbon_credits(ndvi_noise_reduced, pixel_area_m2=0.01)
-            state["carbon_credits"] = credits  # Store the credits in the state
+
+            default_carbon_fraction = 0.47
+
+            carbon_fraction = default_carbon_fraction
+            root_shoot_ratio = None  # Optional: default/fallback value
+
+            try:
+               status = state["analyze_result"].status
+               carbon_fraction = state["analyze_result"].carbon_fraction
+               root_shoot_ratio = state["analyze_result"].root_shoot_ratio
+
+            except Exception:
+                pass  # fallback to default
+
+            if status == "approve":
+                print("Image approved, computing credits...")
+                credits = process_ndvi_for_carbon_credits(ndvi_noise_reduced, carbon_fraction=carbon_fraction, pixel_area_m2=0.01, root_shoot_ratio=root_shoot_ratio)
+                state["carbon_credits"] = credits  # Store the credits in the state
 
             print("Credits computed:", credits)
     else:
@@ -75,24 +95,22 @@ def node_aerial(state: State) -> dict:
 
 # Define the conditional logic function
 def analyze_conditional_edge(state: State) -> str:
-    
-    # Check if 'analyze_result' exists in the state dictionary
+    # Check if analyze_result is present in the state
     if "analyze_result" not in state:
         raise ValueError("'analyze_result' not found in state")
 
-    result = state["analyze_result"]
+    status = None  # Ensure 'status' is always defined
 
-    # If result is an AIMessage, extract the text content
-    if hasattr(result, "content"):
-        result_text = result.content.strip().lower()
+    # Extract the status from the result
+    try:
+        status = state["analyze_result"].status
 
-    elif isinstance(result, str):
-        result_text = result.strip().lower()
+    except Exception:
+        pass  # fallback to default
 
-    else:
-        raise ValueError(f"Unexpected result type: {type(result)}")
+    return "aerial" if status == "approve" else END
 
-    return "aerial" if result_text == "approve" else END
+
 
 
 

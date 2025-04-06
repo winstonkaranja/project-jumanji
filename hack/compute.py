@@ -1,3 +1,4 @@
+import json
 import os
 import time
 import numpy as np
@@ -324,18 +325,65 @@ def estimate_biomass(ndvi, a=2.5, b=1.2):
     """
     return a * np.exp(b * ndvi)  # Biomass in kg/m²
 
-def calculate_carbon_storage(biomass, carbon_fraction=0.47):
+def calculate_carbon_storage(biomass, carbon_fraction, default_carbon_fraction=0.47):
     """
-    Convert biomass to stored carbon using IPCC carbon fraction.
-    
+    Convert biomass to stored carbon using the carbon fraction from the analysis response,
+    or a default value if none is provided.
+
     Parameters:
       biomass (np.ndarray): Biomass per pixel (kg/m²).
-      carbon_fraction (float): Fraction of biomass that is carbon (default: 0.47).
-      from compute import process_ndvi_for_carbon_credits
+      analyse_response (dict, optional): Analysis response containing plant parameters,
+                                         including 'carbon_fraction'.
+      default_carbon_fraction (float): Default fraction of biomass that is carbon.
     Returns:
       np.ndarray: Carbon stored per pixel (kg/m²).
     """
+    # Use the carbon fraction from the analysis response if available and valid
+    if carbon_fraction is not None:
+        carbon_fraction = carbon_fraction
+    else:
+        carbon_fraction = default_carbon_fraction
+    
     return biomass * carbon_fraction
+
+
+
+
+def estimate_root_biomass(above_ground_biomass, root_shoot_ratio, default_ratio=0.5):
+    """
+    Estimates below-ground biomass using the root-shoot ratio.
+
+    Parameters:
+      above_ground_biomass (np.ndarray): Above-ground biomass per pixel (kg/m²).
+      plant_type (str or np.ndarray): The type of plant for each pixel.
+      root_shoot_ratio_map (dict): Dictionary mapping plant types to root-shoot ratios.
+      default_ratio (float): Default root-shoot ratio to use if plant type is not found (default: 0.5).
+
+    Returns:
+      np.ndarray: Estimated below-ground biomass per pixel (kg/m²).
+    """
+    if root_shoot_ratio is not None:
+        return above_ground_biomass * root_shoot_ratio
+    else:
+        print("Warning: Plant type information is not in the expected format for root biomass estimation.")
+        return above_ground_biomass * default_ratio
+    
+
+def calculate_root_carbon_storage(root_biomass, carbon_fraction, default_carbon_fraction=0.47):
+    """
+    Convert root biomass to stored carbon.
+
+    Parameters:
+      root_biomass (np.ndarray): Root biomass per pixel (kg/m²).
+      carbon_fraction (float): Fraction of biomass that is carbon (default: 0.47).
+
+    Returns:
+      np.ndarray: Carbon stored in roots per pixel (kg/m²).
+    """
+    if carbon_fraction is None:
+        carbon_fraction = default_carbon_fraction
+    return root_biomass * carbon_fraction
+
 
 def convert_carbon_to_co2(carbon_storage):
     """
@@ -365,7 +413,7 @@ def calculate_carbon_credits(co2_sequestration, pixel_area_m2):
     return total_co2_tonnes  # Carbon credits (1 credit = 1 tCO₂e)
 
 # ==== AUTOMATION PIPELINE ====
-def process_ndvi_for_carbon_credits(ndvi_noise_reduced, pixel_area_m2):
+def process_ndvi_for_carbon_credits(ndvi_noise_reduced, carbon_fraction, pixel_area_m2, root_shoot_ratio):
     """
     Full pipeline to process NDVI into carbon credits.
     
@@ -376,9 +424,26 @@ def process_ndvi_for_carbon_credits(ndvi_noise_reduced, pixel_area_m2):
     Returns:
       float: Total carbon credits for the farm.
     """
-    biomass = estimate_biomass(ndvi_noise_reduced)  # Step 1: Estimate biomass
-    carbon_storage = calculate_carbon_storage(biomass)  # Step 2: Convert to carbon storage
-    co2_sequestration = convert_carbon_to_co2(carbon_storage)  # Step 3: Convert to CO₂ equivalent
-    carbon_credits = calculate_carbon_credits(co2_sequestration, pixel_area_m2)  # Step 4: Calculate credits
+
+    # Step 1: Estimate biomass
+    biomass = estimate_biomass(ndvi_noise_reduced)
+
+    # Step 2: Convert above-ground biomass to carbon storage using plant-specific fractions
+    carbon_storage_above_ground = calculate_carbon_storage(biomass,carbon_fraction, root_shoot_ratio)
+
+    # Step 3: Estimate below-ground biomass
+    root_biomass = estimate_root_biomass(biomass, root_shoot_ratio, default_ratio=0.5)
+
+    # Step 4: Convert root biomass to carbon storage
+    carbon_storage_below_ground = calculate_root_carbon_storage(root_biomass, carbon_fraction, default_carbon_fraction=0.47)
+
+    # Step 5: Calculate total carbon storage
+    total_carbon_storage = carbon_storage_above_ground + carbon_storage_below_ground
+
+    # Step 6: Convert total carbon storage to CO₂ equivalent
+    co2_sequestration = convert_carbon_to_co2(total_carbon_storage)
+
+    # Step 7: Calculate total carbon credits
+    carbon_credits = calculate_carbon_credits(co2_sequestration, pixel_area_m2)
     
     return carbon_credits

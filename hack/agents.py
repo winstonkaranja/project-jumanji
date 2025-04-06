@@ -109,9 +109,22 @@ def encode_image_from_s3(bucket_name, key):
 
 
 
+from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_core.pydantic_v1 import BaseModel, Field
+
+
+
+# Define the expected structured output using Pydantic.
+class PlantAnalysisOutput(BaseModel):
+    plant: str = Field(..., description="The identified plant type, e.g., 'Maize'")
+    status: str = Field(..., description="Must be 'approve' if a plant is found")
+    carbon_fraction: float = Field(..., description="Carbon fraction value from the CSV")
+    root_shoot_ratio: float = Field(..., description="Root-to-shoot ratio value from the CSV")
+
 def analyze_image_and_get_response(bucket_name: str, key: str, llm) -> dict:
     """
-    Encodes the image from S3, prepares messages, and calls the LLM to analyze the image.
+    Encodes the image from S3, prepares messages, and calls the LLM (with structured output)
+    to analyze the image.
 
     Args:
         bucket_name (str): The S3 bucket where the image is stored.
@@ -119,24 +132,57 @@ def analyze_image_and_get_response(bucket_name: str, key: str, llm) -> dict:
         llm: An instance of a ChatOpenAI (or similar) LLM.
 
     Returns:
-        dict: The response returned by the LLM.
+        dict: The structured response (if a plant is detected) or the string "deny".
     """
     # Encode the image from S3 into a base64 string.
     image_base64 = encode_image_from_s3(bucket_name, key)
     
-    # Prepare the messages with both text and the image URL (embedded in base64).
+    # Prepare messages.
     messages = [
         SystemMessage(content="You are an AI that analyzes images."),
-        HumanMessage(content=[
-            {"type": "text", "text": "You are an image moderation system. Analyze the image and determine if it clearly depicts a plant or plantation (e.g., crops, greenery, trees, leaves, or agricultural land). Only reply with `approve` if it's clearly a plant/plantation image. Otherwise, reply with `deny`. Respond with only one word in lowercase: `approve` or `deny`."
-        },
-            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}}
-        ])
+        HumanMessage(content="""
+            You are an image moderation and analysis system with an integrated plant parameter module.
+            Your task is twofold:
+            1. Analyze the input image to determine if it clearly depicts a plant or plantation (e.g., crops, greenery, trees, leaves, or agricultural land).
+            2. If a plant is detected, identify the most likely plant type from the sample CSV data provided and return the corresponding parameters.
+            If the image is not a plant/plantation, simply reply with the single word 'deny' (all lowercase).
+
+            If the image depicts a plant, your response must be a JSON object with the following keys:
+            - plant: the plant type (e.g., 'Maize', 'Soybean', etc.)
+            - status: the word 'approve'
+            - carbon_fraction: the carbon fraction value from the CSV
+            - root_shoot_ratio: the root-to-shoot ratio value from the CSV
+
+            Use the following CSV data as your reference:
+
+            Plant,Carbon Fraction,Root-Shoot Ratio
+            Maize,0.45,0.20
+            Soybean,0.50,0.15
+            Wheat,0.47,0.18
+            Rice,0.46,0.16
+
+            Ensure your output strictly follows this JSON structure if a plant is detected. Otherwise, output only the word 'deny'.
+                    """),
+        HumanMessage(content=[{
+            "type": "image_url", 
+            "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}
+        }])
     ]
     
-    # Invoke the LLM with the prepared messages.
-    response = llm.invoke(messages)
-    return response
+    # Wrap the LLM with structured output enforcement.
+    structured_llm = llm.with_structured_output(PlantAnalysisOutput)
+    
+    try:
+        # Invoke the LLM with the structured output parser.
+        result = structured_llm.invoke(messages)
+        return result  # This will be a dict matching PlantAnalysisOutput.
+    except Exception as e:
+        # If structured parsing fails (for example, if the output is "deny"),
+        # fallback to a raw LLM invocation.
+        raw_output = llm.invoke(messages)
+        if raw_output.strip() == "deny":
+            return "deny"
+        raise ValueError(f"Unexpected LLM output: {raw_output}") from e
 
 
 
