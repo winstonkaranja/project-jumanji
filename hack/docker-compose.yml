@@ -26,7 +26,7 @@ services:
             retries: 5
             interval: 5s
     langgraph-api:
-        image: "docker push underdogquality23/carbonsync:v1"
+        image: "underdogquality23/carbonsync:v1.1"
         ports:
             - "8123:8000"
         depends_on:
