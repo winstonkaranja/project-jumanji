@@ -4,7 +4,6 @@ from typing import NotRequired, TypedDict
 from langgraph.graph import StateGraph, START, END
 from langchain_openai import ChatOpenAI
 import numpy as np
-from regex import D
 
 from agents import aerial_photo_analysis, analyze_image_and_get_response
 from compute import process_ndvi_for_carbon_credits
@@ -27,16 +26,32 @@ def node_analyze(state: State) -> dict:
     # Define the LLM
     llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
+    # Check if user_id is present in the state
+    if "user_id" not in state:
+        raise ValueError("user_id not found in state")
+
+    # Check if ground_key is present in the state
+    if "ground_key" not in state:
+        raise ValueError("ground_key not found in state")
+
     # Call the first function using bucket_name and key from the state and the global llm
     result = analyze_image_and_get_response("qijaniproductsbucket", state["ground_key"], llm)
     state["analyze_result"] = result
 
-    return {"analyze_result": result}
+    return {"user_id": state["user_id"],"analyze_result": state["analyze_result"]}
 
 # Define the node that calls aerial_photo_analysis
 def node_aerial(state: State) -> dict:
     # Define the LLM
     llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+
+    # Check if user_id is present in the state
+    if "user_id" not in state:
+        raise ValueError("user_id not found in state")
+
+    # Check if aerial_key is present in the state
+    if "aerial_key" not in state:
+        raise ValueError("aerial_key not found in state")
 
     # Call the aerial photo analysis using the key and global llm
     result = aerial_photo_analysis(state["aerial_key"], llm)
@@ -53,13 +68,18 @@ def node_aerial(state: State) -> dict:
 
             print("Credits computed:", credits)
     else:
-            raise Exception("Image rejected")
+            raise Exception("Image rejected!")
 
-    return {"aerial_result": state["aerial_result"], "carbon_credits": state["carbon_credits"]} 
+    return { "user_id": state["user_id"],"aerial_result": state["aerial_result"], "carbon_credits": state["carbon_credits"]} 
 
 
 # Define the conditional logic function
 def analyze_conditional_edge(state: State) -> str:
+    
+    # Check if 'analyze_result' exists in the state dictionary
+    if "analyze_result" not in state:
+        raise ValueError("'analyze_result' not found in state")
+
     result = state["analyze_result"]
 
     # If result is an AIMessage, extract the text content

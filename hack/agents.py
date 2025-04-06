@@ -1,3 +1,4 @@
+import os
 from typing import Any
 import boto3
 from dotenv import load_dotenv
@@ -5,13 +6,14 @@ import tifffile as tiff
 import numpy as np
 from io import BytesIO
 
-
-import os
 from PIL import Image
+
+import matplotlib.pyplot as plt
 
 from langchain.agents import AgentExecutor, create_tool_calling_agent
 from langchain_core.tools import tool
-import openai
+
+from langchain_core.prompts import ChatPromptTemplate
 
 
 
@@ -25,11 +27,7 @@ import os
 from compute import full_image_processing_pipeline, process_ndvi_for_carbon_credits
 
 
-
-
-
-
-
+#Read image files from aws s3 bucket
 def read_image_from_s3(bucket_name, key):
     """
     Download an image from S3 and load it based on its file type.
@@ -76,6 +74,8 @@ def read_image_from_s3(bucket_name, key):
 os.environ.clear()
 load_dotenv()
 api_key = os.environ["OPENAI_API_KEY"]
+
+
 
 # Load the Image and Convert to Base64
 def encode_image_from_s3(bucket_name, key):
@@ -143,14 +143,11 @@ def analyze_image_and_get_response(bucket_name: str, key: str, llm) -> dict:
 
 
 
-
-
 # -------------------------------------------------------
 # Step 2: Wrap NDVI Check as a LangChain Tool for Aerial Photo
 # -------------------------------------------------------
 
-from langchain_core.prompts import ChatPromptTemplate
-import matplotlib.pyplot as plt
+
 
 # -------------------------------
 # Global Parameters for the Pipeline
@@ -262,7 +259,4 @@ def aerial_photo_analysis(key: str, llm) -> dict:
     # Run the agent (the "input" field is used as the initial message for the agent)
     result = validity_agent.invoke({"input": "Image: " + key})
     return result
-
-
-
 
