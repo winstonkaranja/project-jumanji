@@ -1,6 +1,6 @@
-train: ./Dataset/train/images
-val: ./Dataset/val/images
-test: ./Dataset/test/images
+train: /home/salter/Desktop/project-jumanji/hack/Dataset/output_dataset/images/train
+val: /home/salter/Desktop/project-jumanji/hack/Dataset/output_dataset/images/val
+test: /home/salter/Desktop/project-jumanji/hack/Dataset/output_dataset/images/test
 
 nc: 102
 

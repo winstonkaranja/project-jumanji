@@ -26,6 +26,10 @@ classes = [ 'rice leaf roller', 'rice leaf caterpillar', 'paddy stem maggot', 'a
 
 def convert_annotation(xml_folder, save_folder, img_folder):
     os.makedirs(save_folder, exist_ok=True)
+    
+    # Track all classes found for reference
+    found_classes = set()
+    
     for xml_file in os.listdir(xml_folder):
         if not xml_file.endswith('.xml'):
             continue
@@ -38,63 +42,58 @@ def convert_annotation(xml_folder, save_folder, img_folder):
 
         label_path = os.path.join(save_folder, xml_file.replace('.xml', '.txt'))
         with open(label_path, 'w') as out_file:
-            for obj in root.findall('object'):
-                cls = obj.find('name').text
-                if cls not in classes:
-                    continue
-                cls_id = classes.index(cls)
+            try:
+                objects = root.findall('object')
+                print(f"Found {len(objects)} objects in {xml_file}")
+                if len(objects) == 0:
+                    print(f"No objects found in {xml_file}")
+                
+                for obj in objects:
+                    cls = obj.find('name').text
+                    print(f"Object class: {cls}")
+                    found_classes.add(cls)
+                    
+                    # Try to convert the class to an integer (index in the classes list)
+                    # If that fails, use it as a direct index
+                    try:
+                        # Convert numeric class ID to integer
+                        class_index = int(cls)
+                        
+                        # Check if this index is within the range of our classes list
+                        if 0 <= class_index < len(classes):
+                            # Use the class index directly in YOLO format
+                            cls_id = class_index
+                        else:
+                            # If it's out of range, we'll just use the number as is
+                            cls_id = class_index
+                    except ValueError:
+                        # If it's not a number, check if it's in our classes list
+                        if cls in classes:
+                            cls_id = classes.index(cls)
+                        else:
+                            print(f"Unknown class '{cls}', skipping")
+                            continue
+                    
+                    xml_box = obj.find('bndbox')
+                    xmin = float(xml_box.find('xmin').text)
+                    xmax = float(xml_box.find('xmax').text)
+                    ymin = float(xml_box.find('ymin').text)
+                    ymax = float(xml_box.find('ymax').text)
 
-                xml_box = obj.find('bndbox')
-                xmin = float(xml_box.find('xmin').text)
-                xmax = float(xml_box.find('xmax').text)
-                ymin = float(xml_box.find('ymin').text)
-                ymax = float(xml_box.find('ymax').text)
+                    x_center = ((xmin + xmax) / 2) / w
+                    y_center = ((ymin + ymax) / 2) / h
+                    width = (xmax - xmin) / w
+                    height = (ymax - ymin) / h
 
-                x_center = ((xmin + xmax) / 2) / w
-                y_center = ((ymin + ymax) / 2) / h
-                width = (xmax - xmin) / w
-                height = (ymax - ymin) / h
+                    print(f"Writing to file: {cls_id} {x_center} {y_center} {width} {height}")
+                    out_file.write(f"{cls_id} {x_center} {y_center} {width} {height}\n")
+                    
+            except Exception as e:  
+                print(f"Error processing {xml_file}: {e}")
+    
+    # Print all unique classes found for reference
+    print(f"All classes found: {sorted(list(found_classes))}")
+    return found_classes
 
-                out_file.write(f"{cls_id} {x_center} {y_center} {width} {height}\n")
-
-# def convert_annotation(xml_folder, save_folder, img_folder):
-#     os.makedirs(save_folder, exist_ok=True)
-#     for xml_file in os.listdir(xml_folder):
-#         if not xml_file.endswith('.xml'):
-#             continue
-#         full_path = os.path.join(xml_folder, xml_file)
-#         try:
-#             tree = ET.parse(full_path)
-#             root = tree.getroot()
-#         except ET.ParseError as e:
-#             print(f"Skipping invalid XML: {xml_file} -> {e}")
-#             continue
-
-
-
-import os
-import xml.etree.ElementTree as ET
-
-def clean_invalid_xml(xml_folder):
-    removed_count = 0
-    for xml_file in os.listdir(xml_folder):
-        if not xml_file.endswith('.xml'):
-            continue
-        full_path = os.path.join(xml_folder, xml_file)
-        try:
-            ET.parse(full_path)
-        except ET.ParseError as e:
-            print(f"Deleting invalid XML -> {xml_file}: {e}")
-            os.remove(full_path)
-            removed_count += 1
-    print(f"\nCleanup complete. {removed_count} invalid file(s) deleted.")
-
-# Usage:
-# clean_invalid_xml('Dataset/Annotations')
-
-
-
-
-
-# Example:
+# Example usage:
 convert_annotation('Dataset/Annotations', 'Dataset/labels', 'Dataset/JPEGImages')

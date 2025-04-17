@@ -9,3 +9,4 @@ __pycache__
 ndvi_output.jpg
 ndvi_result2.npy
 hack/Dataset
+hack/yolo11n.pt
