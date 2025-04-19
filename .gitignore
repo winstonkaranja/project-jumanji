@@ -10,3 +10,5 @@ ndvi_output.jpg
 ndvi_result2.npy
 hack/Dataset
 hack/yolo11n.pt
+runs
+hack/trained_models
