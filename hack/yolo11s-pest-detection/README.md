@@ -1,3 +1,37 @@
+---
+license: mit
+datasets:
+  - IP102
+library_name: ultralytics
+tags:
+  - object-detection
+  - YOLO11s
+  - pests
+  - agriculture
+  - ip102
+model-index:
+  - name: IP102 Pest Detector (YOLO11 Small)
+    results:
+      - task: 
+            type: object-detection
+        dataset:
+            name: IP102
+            type: pest-detection
+        metrics:
+          - type: mAP@0.5
+            value: 0.941
+          - type: mAP@0.5:0.95
+            value: 0.838
+          - type: Precision
+            value: 0.923
+          - type: Recall
+            value: 0.907
+
+---
+
+
+
+
 # 🐞 IP102 Pest Detector — YOLO11 Small
 
 A custom YOLO11 object detection model trained on the **IP102** dataset — designed for pest detection in precision agriculture.
