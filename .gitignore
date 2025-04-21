@@ -12,3 +12,5 @@ hack/Dataset
 hack/yolo11n.pt
 runs
 hack/trained_models
+hack/archive.tar.gz
+hack/Dataset.zip

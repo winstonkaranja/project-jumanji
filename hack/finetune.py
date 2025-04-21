@@ -96,4 +96,4 @@ def convert_annotation(xml_folder, save_folder, img_folder):
     return found_classes
 
 # Example usage:
-convert_annotation('Dataset/Annotations', 'Dataset/labels', 'Dataset/JPEGImages')
+convert_annotation('Dataset/Annotations', 'Dataset/output_dataset_balanced/labels', 'Dataset/output_dataset_balanced/images')

@@ -79,8 +79,8 @@ def split_dataset(image_dir, label_dir, output_dir, train_ratio=0.7, val_ratio=0
 
 if __name__ == "__main__":
     split_dataset(
-        image_dir='Dataset/JPEGImages',
-        label_dir='Dataset/labels',
-        output_dir='Dataset/output_dataset',
+        image_dir='Dataset/output_dataset_balanced/images',
+        label_dir='Dataset/output_dataset_balanced/labels',
+        output_dir='Dataset/output_datasetv2',
         random_seed=42  # For reproducibility
     )
