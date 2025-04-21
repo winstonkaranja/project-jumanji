@@ -10,6 +10,6 @@ Thumbs.db
 .env
 
 # Hugging Face LFS
-*.pt
+
 *.bin
 *.onnx
