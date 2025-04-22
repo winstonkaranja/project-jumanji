@@ -14,7 +14,46 @@ import boto3
 import tifffile as tiff
 import numpy as np
 from io import BytesIO
+from PIL import Image
 
+
+#Read image files from aws s3 bucket
+def read_image_from_s3(bucket_name, key):
+    """
+    Download an image from S3 and load it based on its file type.
+    Supports TIFF (.tif, .tiff) and JPEG (.jpg, .jpeg) formats.
+    
+    For TIFF images, the image is returned as a NumPy array (float32).
+    For JPEG images, the image is returned as a PIL.Image instance.
+    """
+    
+    s3_client = boto3.client(
+        's3',
+        aws_access_key_id=os.environ.get('AWS_ACCESS_KEY'),
+        aws_secret_access_key=os.environ.get('AWS_SECRET_KEY'),
+        region_name=os.environ.get('AWS_REGION')
+    )
+
+    
+    # Get the object from S3
+    response = s3_client.get_object(Bucket=bucket_name, Key=key)
+    image_data = response['Body'].read()
+    
+    # Create a file-like object from the data
+    file_obj = BytesIO(image_data)
+    
+    # Check file extension to decide how to load the image
+    key_lower = key.lower()
+    if key_lower.endswith(('.tif', '.tiff')):
+        # Load TIFF image using tifffile and convert to float32 NumPy array
+        image = tiff.imread(file_obj).astype(np.float32)
+    elif key_lower.endswith(('.jpg', '.jpeg')):
+        # Load JPEG image using PIL
+        image = Image.open(file_obj)
+    else:
+        raise ValueError("Unsupported image format. Please use TIFF or JPEG.")
+    
+    return image
 
 
 
@@ -22,29 +61,7 @@ from io import BytesIO
 # Radiometric & Geometric Correction (Tasks 1 & 2)
 # -------------------------------
 
-def read_tiff_from_s3(bucket_name, key):
-    # Initialize S3 client
-    s3_client = boto3.client(
-    's3',
-    aws_access_key_id=os.environ.get('AWS_ACCESS_KEY'),
-    aws_secret_access_key=os.environ.get('AWS_SECRET_KEY'),
-    region_name=os.environ.get('AWS_REGION')
-  )
 
-    
-    # Get the object from S3
-    response = s3_client.get_object(Bucket=bucket_name, Key=key)
-    
-    # Read the data using tifffile from the response body
-    image_data = response['Body'].read()
-    
-    # Create a file-like object
-    file_obj = BytesIO(image_data)
-    
-    # Read the TIFF using tifffile
-    image = tiff.imread(file_obj).astype(np.float32)
-    
-    return image
 
 
 
