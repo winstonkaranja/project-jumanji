@@ -1,7 +1,7 @@
 {
     "dockerfile_lines": [],
     "graphs": {
-      "advisor": "./recomendation.py:advisor_graph"
+      "advisor": "./recommendation.py:advisor_graph"
     },
     "dependencies": ["."],
     "python_version": "3.11",

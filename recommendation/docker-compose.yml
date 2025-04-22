@@ -1,14 +1,16 @@
 volumes:
     langgraph-data:
         driver: local
+
 services:
     langgraph-redis:
         image: redis:6
         healthcheck:
-            test: redis-cli ping
+            test: ["CMD", "redis-cli", "ping"]
             interval: 5s
             timeout: 1s
             retries: 5
+
     langgraph-postgres:
         image: postgres:16
         ports:
@@ -20,13 +22,16 @@ services:
         volumes:
             - langgraph-data:/var/lib/postgresql/data
         healthcheck:
-            test: pg_isready -U postgres
+            test: ["CMD", "pg_isready", "-U", "postgres"]
             start_period: 10s
             timeout: 1s
             retries: 5
             interval: 5s
+
     langgraph-api:
-        image: "underdogquality23/maui:v1.0"
+        build:
+            context: ./recommendation
+            dockerfile: Dockerfile
         ports:
             - "8123:8000"
         depends_on:
@@ -35,3 +40,4 @@ services:
             langgraph-postgres:
                 condition: service_healthy
         environment:
+            DATABASE_URI: postgresql://postgres:postgres@langgraph-postgres:5432/postgres

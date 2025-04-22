@@ -1,0 +1,14 @@
+pydantic
+requests
+numpy
+matplotlib
+ultralytics
+langchain-anthropic
+langgraph
+boto3 # Assuming 'compute.py' uses AWS S3 for image processing
+
+scikit-image
+scipy
+tifffile
+Pillow
+opencv-python
