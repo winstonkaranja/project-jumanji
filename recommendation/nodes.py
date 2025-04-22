@@ -68,9 +68,9 @@ def check_for_tiff(input_state: InputStateModel):
 
 
 def weather_node(input_state: InputStateModel) -> OutputStateModel:
-    latitude = input_state["coordinates"].get("latitude")
-    longitude = input_state["coordinates"].get("longitude")
-    output_state: OutputStateModel = {"user_id": input_state.get("user_id")}
+    latitude = input_state.coordinates.latitude
+    longitude = input_state.coordinates.longitude
+    output_state: OutputStateModel = {"user_id": input_state.user_id}
 
     if latitude is not None and longitude is not None:
         weather = WeatherData(latitude=latitude, longitude=longitude)
@@ -80,8 +80,8 @@ def weather_node(input_state: InputStateModel) -> OutputStateModel:
     return output_state
 
 def YOLO_analysis(input_state: InputStateModel) -> OutputStateModel:
-    image_path = input_state["image_key"]
-    output_state: OutputStateModel = {"user_id": input_state.get("user_id")}
+    image_path = input_state.image_key
+    output_state: OutputStateModel = {"user_id": input_state.user_id}
 
     try:
         model = YOLO("yolo11s-pest-detection/best.pt")
@@ -121,10 +121,10 @@ def NDVI_analysis(input_state: InputStateModel) -> OutputStateModel:
     NOISE_KERNEL_SIZE = 3
     SIGMA = 1.0
 
-    output_state: OutputStateModel = {"user_id": input_state.get("user_id")}
+    output_state: OutputStateModel = {"user_id": input_state.user_id}
 
     try:
-        image_key = input_state["image_key"]
+        image_key = input_state.image_key
         bucket_name = "qijaniproductsbucket"
         red_band_index = 2
         nir_band_index = 4
@@ -169,7 +169,7 @@ def NDVI_analysis(input_state: InputStateModel) -> OutputStateModel:
         }
 
     except Exception as e:
-        output_state["ndvi_result"] = {"error": str(e)}
+        output_state.ndvi_result = {"error": str(e)}
 
     return output_state
 
@@ -181,11 +181,12 @@ def Maui(input_state: OutputStateModel) -> MauiRecommendationModel:
         api_key=os.getenv("ANTHROPIC_API_KEY")
     )
 
-    ndvi_summary = input_state.get('ndvi_result', {}).get('ndvi_summary', {'mean': 'No NDVI data'})
-    ndvi_image = input_state.get('ndvi_result', {}).get('save_path', 'No NDVI image saved')
+    ndvi_result = getattr(input_state, 'ndvi_result', None)
+    ndvi_summary = getattr(ndvi_result, 'ndvi_summary', {'mean': 'No NDVI data'}) if ndvi_result else {'mean': 'No NDVI data'}
+    ndvi_image = getattr(ndvi_result, 'save_path', 'No NDVI image saved') if ndvi_result else 'No NDVI image saved'
 
-    yolo_detection = input_state.get('yolo_result', {}).get('class_labels', ['No pests detected'])
-    weather_summary = input_state.get('weather_data', {'summary': 'No weather data'})
+    yolo_detection = getattr(input_state, 'yolo_result', None)
+    weather_summary = getattr(input_state, 'weather_data', {'summary': 'No weather data'})
 
     context = f"""
 You are an AI assistant for precision farmers.
