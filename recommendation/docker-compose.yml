@@ -29,9 +29,7 @@ services:
             interval: 5s
 
     langgraph-api:
-        build:
-            context: ./recommendation
-            dockerfile: Dockerfile
+        image: underdogquality23/maui:v1.0
         ports:
             - "8123:8000"
         depends_on:
