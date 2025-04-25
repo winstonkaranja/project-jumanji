@@ -10,7 +10,7 @@ class WeatherData(BaseModel):
     weather: dict = {}
 
     def fetch(self) -> None:
-        """Fetch past, current, and forecast weather from Open-Meteo and save into self.weather."""
+        """Fetch weather including FAO ET0 from Open-Meteo."""
         try:
             url = "https://api.open-meteo.com/v1/forecast"
             params = {
@@ -19,7 +19,11 @@ class WeatherData(BaseModel):
                 "current_weather": True,
                 "past_days": self.past_days,
                 "forecast_days": self.forecast_days,
-                "daily": "temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max,relative_humidity_2m_mean",
+                "daily": (
+                    "temperature_2m_max,temperature_2m_min,"
+                    "precipitation_sum,wind_speed_10m_max,"
+                    "relative_humidity_2m_mean,et0_fao_evapotranspiration"
+                ),
                 "timezone": "auto"
             }
 
@@ -41,7 +45,8 @@ class WeatherData(BaseModel):
                     f"{date}: Temp {daily['temperature_2m_min'][i]}-{daily['temperature_2m_max'][i]}°C, "
                     f"Humidity {daily['relative_humidity_2m_mean'][i]}%, "
                     f"Rain {daily['precipitation_sum'][i]}mm, "
-                    f"Wind Max {daily['wind_speed_10m_max'][i]} km/h"
+                    f"Wind Max {daily['wind_speed_10m_max'][i]} km/h, "
+                    f"ETo {daily['et0_fao_evapotranspiration'][i]}mm"
                 )
                 if date < today:
                     past_summary.append(day_summary)
