@@ -1,0 +1,17 @@
+venv
+.vscode
+testfiles/20180627_seq_50m_NC copy.tif
+testfiles/20180627_seq_50m_NC.tif
+awscliv2.zip
+aws
+__pycache__
+.env
+ndvi_output.jpg
+ndvi_result2.npy
+hack/Dataset
+hack/yolo11n.pt
+runs
+hack/trained_models
+hack/archive.tar.gz
+hack/Dataset.zip
+testfiles/target_images
